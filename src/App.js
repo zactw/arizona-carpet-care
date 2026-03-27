@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import Login from './pages/Login'
 import Calendar from './pages/Calendar'
 import Properties from './pages/Properties'
+import Crew from './pages/Crew'
 import PrintView from './pages/PrintView'
 import Navbar from './components/Navbar'
 
@@ -22,6 +23,7 @@ function AppLayout() {
       <Routes>
         <Route path="/" element={<RequireAuth><Calendar /></RequireAuth>} />
         <Route path="/properties" element={<RequireAuth><Properties /></RequireAuth>} />
+        <Route path="/crew" element={<RequireAuth><Crew /></RequireAuth>} />
       </Routes>
     </div>
   )

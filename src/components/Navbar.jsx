@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { CREW_MEMBERS } from '../lib/constants'
+import { getActiveCrew } from '../lib/crew'
 import { toISODateString } from '../lib/dateUtils'
 
 export default function Navbar({ currentDate }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [printOpen, setPrintOpen] = useState(false)
+  const activeCrew = getActiveCrew()
 
   const handleSignOut = () => {
     localStorage.removeItem('acc_auth')
@@ -50,6 +51,7 @@ export default function Navbar({ currentDate }) {
           <div className="flex items-center gap-1">
             {navLink('/', 'Calendar')}
             {navLink('/properties', 'Properties')}
+            {navLink('/crew', 'Crew')}
 
             {/* Print dropdown */}
             <div className="relative">
@@ -69,7 +71,7 @@ export default function Navbar({ currentDate }) {
                     <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       Select Crew
                     </div>
-                    {CREW_MEMBERS.map(crew => (
+                    {activeCrew.map(crew => (
                       <Link
                         key={crew.id}
                         to={`/print/${dateStr}/${crew.id}`}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { CREW_MEMBERS, TIME_SLOTS, STATUS_COLORS } from '../lib/constants'
+import { TIME_SLOTS, STATUS_COLORS } from '../lib/constants'
+import { getActiveCrew } from '../lib/crew'
 import { formatDate, toISODateString, addDays, formatTime12 } from '../lib/dateUtils'
 import JobModal from '../components/JobModal'
 
@@ -11,6 +12,7 @@ export default function Calendar() {
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalInitial, setModalInitial] = useState(null)
+  const [crewMembers, setCrewMembers] = useState(() => getActiveCrew())
 
   const dateStr = toISODateString(currentDate)
 
@@ -48,6 +50,12 @@ export default function Calendar() {
   useEffect(() => {
     loadProperties()
   }, [loadProperties])
+
+  useEffect(() => {
+    const handleStorage = () => setCrewMembers(getActiveCrew())
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
 
   const getJobForCell = (crewName, timeValue) => {
     return jobs.find(j => {
@@ -168,7 +176,7 @@ export default function Calendar() {
               job_date: dateStr,
               start_time: '08:00',
               end_time: '09:00',
-              crew_name: CREW_MEMBERS[0].name,
+              crew_name: crewMembers[0]?.name || '',
               status: 'scheduled',
             })
             setModalOpen(true)
@@ -188,7 +196,7 @@ export default function Calendar() {
           {/* Header row */}
           <div className="flex sticky top-0 bg-white z-10 border-b border-gray-200 shadow-sm">
             <div className="w-20 flex-shrink-0 border-r border-gray-200" />
-            {CREW_MEMBERS.map(crew => (
+            {crewMembers.map(crew => (
               <div
                 key={crew.id}
                 className="w-36 flex-shrink-0 px-3 py-2 text-center border-r border-gray-100 last:border-r-0"
@@ -213,7 +221,7 @@ export default function Calendar() {
               </div>
 
               {/* Crew cells */}
-              {CREW_MEMBERS.map(crew => {
+              {crewMembers.map(crew => {
                 const job = getJobForCell(crew.name, slot.value)
                 const colors = job ? STATUS_COLORS[job.status] || STATUS_COLORS.scheduled : null
                 const propName = job?.property?.name || job?.property_name || ''
