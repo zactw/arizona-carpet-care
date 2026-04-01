@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { logActivity, ACTIONS } from '../lib/activity'
 
 const EMPTY_FORM = {
   name: '',
@@ -138,7 +139,7 @@ export default function Properties() {
     if (!supabase) return
     setLoading(true)
     try {
-      const { data, error } = await supabase.from('properties').select('*').order('name')
+      const { data, error } = await supabase.from('properties').select('*').neq('is_deleted', true).order('name')
       if (!error) setProperties(data || [])
     } catch (e) {
       console.warn('Could not load properties:', e.message)
@@ -164,21 +165,30 @@ export default function Properties() {
         .update({ ...form, updated_at: new Date().toISOString() })
         .eq('id', form.id)
       if (error) throw error
+      await logActivity(ACTIONS.PROPERTY_UPDATED, 'property', form.id, `Updated property: ${form.name}`)
     } else {
-      const { error } = await supabase.from('properties').insert([form])
+      const { data, error } = await supabase.from('properties').insert([form]).select().single()
       if (error) throw error
+      await logActivity(ACTIONS.PROPERTY_CREATED, 'property', data?.id, `Created property: ${form.name}`)
     }
     await load()
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this property? This cannot be undone.')) return
+    if (!window.confirm('Delete this property?')) return
+    const prop = properties.find(p => p.id === id)
     if (!supabase) {
       setProperties(prev => prev.filter(p => p.id !== id))
       return
     }
-    const { error } = await supabase.from('properties').delete().eq('id', id)
-    if (!error) setProperties(prev => prev.filter(p => p.id !== id))
+    const { error } = await supabase
+      .from('properties')
+      .update({ is_deleted: true, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (!error) {
+      await logActivity(ACTIONS.PROPERTY_DELETED, 'property', id, `Deleted property: ${prop?.name || 'Unknown'}`)
+      setProperties(prev => prev.filter(p => p.id !== id))
+    }
   }
 
   const filtered = properties.filter(p =>

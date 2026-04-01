@@ -25,6 +25,7 @@ export default function PrintView() {
           .eq('job_date', date)
           .eq('crew_name', crewName)
           .neq('status', 'cancelled')
+          .neq('is_deleted', true)
           .order('start_time')
         if (!error) setJobs(data || [])
       } catch (e) {

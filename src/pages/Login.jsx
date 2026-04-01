@@ -1,20 +1,35 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { logActivity, ACTIONS } from '../lib/activity'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    // Dummy auth — any credentials work
-    setTimeout(() => {
-      localStorage.setItem('acc_auth', 'true')
+    setError('')
+
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (authError) throw authError
+
+      await logActivity(ACTIONS.USER_LOGIN, 'user', data.user?.id, `User logged in: ${email}`)
       navigate('/')
-    }, 400)
+    } catch (err) {
+      setError(err.message || 'Failed to sign in')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -35,6 +50,12 @@ export default function Login() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Email

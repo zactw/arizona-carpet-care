@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { CREW_MEMBERS, JOB_STATUSES } from '../lib/constants'
 import { addOneHour, toISODateString } from '../lib/dateUtils'
 
-export default function JobModal({ isOpen, onClose, onSave, initialData, properties, onPropertiesChange }) {
+export default function JobModal({ isOpen, onClose, onSave, onDelete, initialData, properties, onPropertiesChange }) {
   const [form, setForm] = useState({
     property_id: '',
     property_name: '',
@@ -17,6 +17,8 @@ export default function JobModal({ isOpen, onClose, onSave, initialData, propert
   const [propertySearch, setPropertySearch] = useState('')
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState('')
   const [showNewPropertyForm, setShowNewPropertyForm] = useState(false)
   const [newProperty, setNewProperty] = useState({ name: '', address: '' })
@@ -39,6 +41,7 @@ export default function JobModal({ isOpen, onClose, onSave, initialData, propert
       setError('')
       setShowNewPropertyForm(false)
       setNewProperty({ name: '', address: '' })
+      setConfirmDelete(false)
     }
   }, [isOpen, initialData, properties])
 
@@ -76,6 +79,24 @@ export default function JobModal({ isOpen, onClose, onSave, initialData, propert
       setError(err.message || 'Failed to save job')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+    setDeleting(true)
+    setError('')
+    try {
+      await onDelete(form.id)
+      onClose()
+    } catch (err) {
+      setError(err.message || 'Failed to delete job')
+    } finally {
+      setDeleting(false)
+      setConfirmDelete(false)
     }
   }
 
@@ -283,20 +304,39 @@ export default function JobModal({ isOpen, onClose, onSave, initialData, propert
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? 'Saving...' : 'Save Job'}
-          </button>
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-between">
+          {/* Delete button - only show for existing jobs */}
+          {initialData?.id ? (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className={`px-4 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 ${
+                confirmDelete
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'border border-red-300 text-red-600 hover:bg-red-50'
+              }`}
+            >
+              {deleting ? 'Deleting...' : confirmDelete ? 'Confirm Delete' : 'Delete Job'}
+            </button>
+          ) : (
+            <div />
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setConfirmDelete(false); onClose() }}
+              className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? 'Saving...' : 'Save Job'}
+            </button>
+          </div>
         </div>
       </div>
 

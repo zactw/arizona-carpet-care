@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { getCrew, addCrewMember, deleteCrewMember, toggleCrewMember } from '../lib/crew'
+import { logActivity, ACTIONS } from '../lib/activity'
 
 export default function Crew() {
   const [crew, setCrew] = useState(() => getCrew())
@@ -8,7 +9,7 @@ export default function Crew() {
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [error, setError] = useState('')
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const trimmed = newName.trim()
     if (!trimmed) {
       setError('Name is required.')
@@ -20,20 +21,27 @@ export default function Crew() {
     }
     const updated = addCrewMember(trimmed)
     setCrew(updated)
+    await logActivity(ACTIONS.CREW_ADDED, 'crew', null, `Added crew member: ${trimmed}`)
     setNewName('')
     setAdding(false)
     setError('')
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    const member = crew.find(c => c.id === id)
     const updated = deleteCrewMember(id)
     setCrew(updated)
+    await logActivity(ACTIONS.CREW_DELETED, 'crew', id, `Deleted crew member: ${member?.name || 'Unknown'}`)
     setConfirmDelete(null)
   }
 
-  const handleToggle = (id) => {
+  const handleToggle = async (id) => {
+    const member = crew.find(c => c.id === id)
     const updated = toggleCrewMember(id)
     setCrew(updated)
+    const action = member?.active ? ACTIONS.CREW_DEACTIVATED : ACTIONS.CREW_ACTIVATED
+    const status = member?.active ? 'deactivated' : 'activated'
+    await logActivity(action, 'crew', id, `${member?.name || 'Unknown'} was ${status}`)
   }
 
   const handleCancelAdd = () => {
