@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { CREW_MEMBERS } from '../lib/constants'
+import { getCrew } from '../lib/crew'
 import { fromISODateString, formatDate, formatTime12 } from '../lib/dateUtils'
 
 export default function PrintView() {
@@ -9,7 +9,7 @@ export default function PrintView() {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const crew = CREW_MEMBERS.find(c => c.id === crewId)
+  const crew = getCrew().find(c => c.id === crewId)
   const crewName = crew?.name || crewId
 
   useEffect(() => {
