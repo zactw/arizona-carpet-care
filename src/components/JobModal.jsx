@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { CREW_MEMBERS, JOB_STATUSES } from '../lib/constants'
+import { JOB_STATUSES } from '../lib/constants'
 import { addOneHour, toISODateString } from '../lib/dateUtils'
 
-export default function JobModal({ isOpen, onClose, onSave, onDelete, initialData, properties, onPropertiesChange }) {
+export default function JobModal({ isOpen, onClose, onSave, onDelete, initialData, properties, crewMembers, onPropertiesChange }) {
   const [form, setForm] = useState({
     property_id: '',
     property_name: '',
     job_date: toISODateString(new Date()),
     start_time: '08:00',
     end_time: '09:00',
-    crew_name: CREW_MEMBERS[0].name,
+    crew_name: crewMembers?.[0]?.name || '',
     comments: '',
     status: 'scheduled',
   })
@@ -270,7 +270,7 @@ export default function JobModal({ isOpen, onClose, onSave, onDelete, initialDat
               onChange={e => setForm(prev => ({ ...prev, crew_name: e.target.value }))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              {CREW_MEMBERS.map(c => (
+              {crewMembers.map(c => (
                 <option key={c.id} value={c.name}>{c.name}</option>
               ))}
             </select>

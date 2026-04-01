@@ -68,10 +68,9 @@ export default function Calendar() {
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
-  // Reset edit mode when changing dates
+  // Reset edit mode when changing dates (but keep unassigned jobs loaded)
   useEffect(() => {
     setEditMode(false)
-    setUnassignedJobs([])
   }, [dateStr])
 
   const getJobForCell = (crewName, timeValue) => {
@@ -440,10 +439,10 @@ export default function Calendar() {
           ))}
 
           {/* Unassigned Jobs Section - inside calendar grid */}
-          {editMode && (
+          {(editMode || unassignedJobs.length > 0) && (
             <div
-              onDragOver={handleDragOver}
-              onDrop={handleDropToUnassigned}
+              onDragOver={editMode ? handleDragOver : undefined}
+              onDrop={editMode ? handleDropToUnassigned : undefined}
               className={`border-t-2 border-orange-300 bg-orange-50 p-4 ${
                 draggedJob ? 'bg-orange-100' : ''
               }`}
@@ -454,6 +453,9 @@ export default function Calendar() {
                 </svg>
                 <span className="font-semibold text-orange-800">Unassigned Jobs</span>
                 <span className="text-sm text-orange-600">({unassignedJobs.length})</span>
+                {!editMode && unassignedJobs.length > 0 && (
+                  <span className="text-xs text-orange-500 ml-2">Click "Edit Day" to reassign</span>
+                )}
               </div>
 
               {unassignedJobs.length === 0 ? (
@@ -470,12 +472,12 @@ export default function Calendar() {
                     return (
                       <div
                         key={job.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, job)}
-                        onDragEnd={handleDragEnd}
-                        className={`rounded-lg border p-2 ${colors.bg} ${colors.border} cursor-grab active:cursor-grabbing min-w-[140px] ${
-                          isDragging ? 'opacity-50' : ''
-                        }`}
+                        draggable={editMode}
+                        onDragStart={editMode ? (e) => handleDragStart(e, job) : undefined}
+                        onDragEnd={editMode ? handleDragEnd : undefined}
+                        className={`rounded-lg border p-2 ${colors.bg} ${colors.border} min-w-[140px] ${
+                          editMode ? 'cursor-grab active:cursor-grabbing' : ''
+                        } ${isDragging ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-start gap-1">
                           <div className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${colors.dot}`} />
@@ -505,6 +507,7 @@ export default function Calendar() {
         onDelete={handleDeleteJob}
         initialData={modalInitial}
         properties={properties}
+        crewMembers={crewMembers}
         onPropertiesChange={loadProperties}
       />
     </div>
