@@ -24,18 +24,16 @@ export default function Calendar() {
     if (!supabase) return
     setLoading(true)
     try {
+      // Load jobs for current date
       const { data, error } = await supabase
         .from('jobs')
         .select(`*, property:properties(*)`)
         .eq('job_date', dateStr)
         .neq('is_deleted', true)
+        .neq('crew_name', 'unassigned')
         .order('start_time')
       if (!error) {
-        // Separate assigned and unassigned jobs
-        const assigned = data?.filter(j => j.crew_name && j.start_time) || []
-        const unassigned = data?.filter(j => !j.crew_name || j.crew_name === 'unassigned') || []
-        setJobs(assigned)
-        setUnassignedJobs(unassigned)
+        setJobs(data?.filter(j => j.crew_name) || [])
       }
     } catch (e) {
       console.warn('Could not load jobs:', e.message)
@@ -43,6 +41,25 @@ export default function Calendar() {
       setLoading(false)
     }
   }, [dateStr])
+
+  const loadUnassignedJobs = useCallback(async () => {
+    if (!supabase) return
+    try {
+      // Load ALL unassigned jobs (not filtered by date)
+      const { data, error } = await supabase
+        .from('jobs')
+        .select(`*, property:properties(*)`)
+        .eq('crew_name', 'unassigned')
+        .neq('is_deleted', true)
+        .order('job_date')
+        .order('start_time')
+      if (!error) {
+        setUnassignedJobs(data || [])
+      }
+    } catch (e) {
+      console.warn('Could not load unassigned jobs:', e.message)
+    }
+  }, [])
 
   const loadProperties = useCallback(async () => {
     if (!supabase) return
@@ -57,6 +74,10 @@ export default function Calendar() {
   useEffect(() => {
     loadJobs()
   }, [loadJobs])
+
+  useEffect(() => {
+    loadUnassignedJobs()
+  }, [loadUnassignedJobs])
 
   useEffect(() => {
     loadProperties()
@@ -204,10 +225,11 @@ export default function Calendar() {
       }
     }
 
-    // Update dragged job
+    // Update dragged job (also set job_date to current date when assigning)
     const updatedJob = {
       ...draggedJob,
       crew_name: crewName,
+      job_date: dateStr,
       start_time: newStartTime,
       end_time: newEndTime,
     }
@@ -225,6 +247,7 @@ export default function Calendar() {
         .from('jobs')
         .update({
           crew_name: crewName,
+          job_date: dateStr,
           start_time: newStartTime,
           end_time: newEndTime,
           updated_at: new Date().toISOString(),
@@ -243,7 +266,8 @@ export default function Calendar() {
     if (!editMode || !draggedJob) return
 
     // Move to unassigned
-    setUnassignedJobs(prev => [...prev, draggedJob])
+    const unassignedJob = { ...draggedJob, crew_name: 'unassigned' }
+    setUnassignedJobs(prev => [...prev, unassignedJob])
     setJobs(prev => prev.filter(j => j.id !== draggedJob.id))
 
     // Update in database
@@ -468,6 +492,7 @@ export default function Calendar() {
                     const colors = STATUS_COLORS[job.status] || STATUS_COLORS.scheduled
                     const propName = job.property?.name || job.property_name || 'Unknown'
                     const isDragging = draggedJob?.id === job.id
+                    const jobDate = job.job_date ? new Date(job.job_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
 
                     return (
                       <div
@@ -486,7 +511,7 @@ export default function Calendar() {
                               {propName}
                             </p>
                             <p className={`text-xs opacity-60 ${colors.text}`}>
-                              {formatTime12(job.start_time)}
+                              {jobDate} · {formatTime12(job.start_time)}
                             </p>
                           </div>
                         </div>
